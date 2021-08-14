@@ -23,8 +23,5 @@ streamer_data <- tibble::tibble(yml_data) %>%
     dplyr::filter(platform == "twitch") %>%
     dplyr::mutate(user_data = purrr::map(user_id, ~get_twitch_id(user_name = .x))) %>%
     tidyr::unnest(cols = user_data) %>%
-    #dplyr::mutate(id = purrr::map_chr(user_id, ~get_twitch_id(user_name = .x))) %>%
     dplyr::mutate(schedule_data = purrr::map(id, ~get_twitch_schedule(.x)),
             videos_data = purrr::map(id, ~get_twitch_videos(.x)))
-
-#region usethis::use_data(streamer_data, overwrite = TRUE)
