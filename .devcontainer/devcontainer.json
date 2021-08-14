@@ -45,7 +45,7 @@
 		"MS-vsliveshare.vsliveshare-pack",
 		"ms-python.python",
 		"RDebugger.r-debugger",
-		//"GitHub.copilot",
+		"GitHub.copilot",
 		"eamodio.gitlens"
 	]
 
