@@ -1,0 +1,56 @@
+# For help debugging build failures open an issue on the RStudio community with the 'github-actions' tag.
+# https://community.rstudio.com/new-topic?category=Package%20development&tags=github-actions
+on:
+  schedule:
+    - cron: "0 * * * *"
+  push:
+    branches:
+      - main
+      - master
+
+name: Generate and upload streamer data
+
+jobs:
+  generate-data:
+    runs-on: ${{ matrix.config.os }}
+    
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest, r: 'release'}
+    
+    env:
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+      TWITCH_SECRET: ${{ secrets.TWITCH_SECRET }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      DO_SPACE: ${{ secrets.DO_SPACE }}
+      DO_ACCESS_KEY_ID: ${{ secrets.DO_ACCESS_KEY_ID }}
+      DO_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_ACCESS_KEY }}
+      DO_DATACENTER: ${{ secrets.DO_DATACENTER }}
+      R_CONFIG_ACTIVE: "production"
+      AWS_S3_ENDPOINT: ${{ secrets.AWS_S3_ENDPOINT }}
+      
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: r-lib/actions/setup-r@master
+      
+      - name: Install renv
+        run: |
+          install.packages("renv")
+        shell: Rscript {0}
+      
+      - name: Restore environment
+        run: |
+          renv::consent(TRUE)
+          renv::restore()
+        shell: Rscript {0}
+        
+      - name: Run data generation
+        run:
+          Rscript -e "source('streamer_data.R')""
