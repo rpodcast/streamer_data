@@ -7,6 +7,9 @@ library(aws.s3)
 # import config settings ----
 config <- config::get()
 
+# ensure the here package is tracked by renv
+my_dir <- here::here()
+
 # set up authentication via environment variables
 twitchr::twitch_auth()
 
