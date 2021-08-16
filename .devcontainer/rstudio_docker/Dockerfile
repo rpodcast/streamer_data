@@ -25,7 +25,7 @@ RUN apt-get update \
     && apt-get -y install --no-install-recommends libxml2-dev libsodium-dev libssl-dev imagemagick libmagick++-dev libgit2-dev libssh2-1-dev zlib1g-dev librsvg2-dev libudunits2-dev libfontconfig1-dev libfreetype6-dev 
 
 # install R packages needed for VSCode interaction and package management
-RUN install2.r languageserver renv remotes
+RUN install2.r languageserver renv remotes httpgd
 
 # install radian via python and pip3
 RUN apt-get update \
