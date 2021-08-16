@@ -1,0 +1,7 @@
+default:
+  log_dir: !expr here::here("logs")
+  data_dir: !expr here::here("data")
+  pins: "local"
+
+production:
+  pins: "cloud"

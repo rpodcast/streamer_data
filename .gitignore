@@ -5,3 +5,5 @@
 .Ruserdata
 .DS_Store
 .Renviron
+prototyping/*
+!prototyping/README.md
