@@ -26,7 +26,8 @@ streamer_data <- yml_data %>%
     dplyr::mutate(schedule_data = purrr::map(id, ~get_twitch_schedule(.x)),
             videos_data = purrr::map(id, ~get_twitch_videos(.x)))
 
-s3saveRDS(
+if (config::is_active("production")) {
+  s3saveRDS(
     x = streamer_data,
     object = "streamer_data_current.rds",
     acl = "public-read",
@@ -35,4 +36,7 @@ s3saveRDS(
     secret = Sys.getenv("DO_SECRET_ACCESS_KEY"),
     region = Sys.getenv("DO_DATACENTER"),
     base_url = "linodeobjects.com"
-)
+  )
+} else {
+  saveRDS(streamer_data, file = "data/streamer_data_current.rds")
+}
