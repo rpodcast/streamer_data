@@ -28,29 +28,22 @@ parse_duration <- function(x,
 
   # extract relevant parts of duration matrix
   dur_vec <- readr::parse_number(dur_parsed[1, c(2,3,4)])
-
   names(dur_vec) <- c("hours", "minutes", "seconds")
-
   time_mult <- switch(
     time_unit,
     hours = c(1, (1/60), (1/3600)),
     minutes = c(60, 1, (1/60)),
     seconds = c(3600, 60, 1)
   )
-
   dur_vec <- sum(dur_vec * time_mult)
-
   return(dur_vec)
-
 }
 
 # https://stackoverflow.com/questions/27397332/find-round-the-time-to-nearest-half-an-hour-from-a-single-file
 round_time <- function(x) {
   x <- as.POSIXlt(x)
-
   x$min <- round(x$min / 30) * 30
   x$sec <- floor(x$sec / 60)
-
   x <- as.POSIXct(x)
   return(x)
 }
@@ -61,9 +54,7 @@ shift_week <- function(x, convert = TRUE, which = "next") {
   } else {
     # get current day of week from supplied date
     x_weekday <- clock::as_year_month_weekday(x) %>% clock::get_day()
-
     res <- clock::date_shift(x, target = clock::weekday(x_weekday), which = which, boundary = "advance")
-
     return(res)
   }
 }
@@ -76,9 +67,10 @@ compute_end_clock <- function(start_clock, stream_length, precision = "hour") {
 }
 
 time_parser <- function(x, orig_zone = "UTC", new_zone = "America/New_York", format = "%Y-%m-%dT%H:%M:%SZ", convert_to_char = TRUE) {
-  # was format = "%Y%m%dT%H%M%S" for ical
-
-  x <- clock::date_time_parse(x, orig_zone, format = format)
+  if (is.character(x)) {
+    x <- clock::date_time_parse(x, orig_zone, format = format)
+  }
+  
   x_z <- clock::as_zoned_time(x)
 
   # change to the desired time zone
@@ -92,16 +84,17 @@ time_parser <- function(x, orig_zone = "UTC", new_zone = "America/New_York", for
 
 
 get_twitch_schedule <- function(id) {
-  r <- httr::GET("https://api.twitch.tv/helix/schedule", query = list(broadcaster_id = id))
-  status <- httr::status_code(r)
+  message(glue::glue("parsing schedule for {id}"))
+  r <- twitchr::get_schedule(broadcaster_id = id, clean_json = TRUE)
+  status <- is.null(r)
 
-  if (status != 200) {
+  if (status) {
     warning(glue::glue("User {id} does not have valid schedule data. Proceeding to infer a schedule based on videos uploaded (status code {status})"))
     r <- httr::GET("https://api.twitch.tv/helix/videos", query = list(user_id = id, period = "week"))
-    status <- httr::status_code(r)
+    status_vid <- httr::status_code(r)
 
-    if (status != 200) {
-      warning(glue::glue("User {id} does not have any videos! Skipping ..."))
+    if (status_vid != 200) {
+      warning(glue::glue("User {id} does not have any videos! Skipping schedule parsing..."))
       return(NULL)
     } else {
       current_weekday <- clock::date_now("America/New_York") %>%  
@@ -146,18 +139,14 @@ get_twitch_schedule <- function(id) {
       }
     }
   } else {
-    res <- httr::content(r, "parsed") %>%
-      purrr::pluck("data", "segments") %>%
-      tibble::tibble() %>%
-      tidyr::unnest_wider(1)
+    res <- r$data
 
     res_int <- res %>%
       mutate(start = purrr::map(start_time, ~time_parser(.x, convert_to_char = FALSE)),
              end = purrr::map(end_time, ~time_parser(.x, convert_to_char = FALSE)),
              category = "time",
              recurrenceRule = "Every week") %>%
-      dplyr::select(start_time, start, end_time, end, title, category, recurrenceRule)
-      #tidyr::unnest(cols = c(start, end))
+      dplyr::select(start_time, start, end_time, end, title, category, recurrenceRule) 
 
     # grab the first records of each unique stream     
     res_first <- res_int %>%
@@ -171,15 +160,37 @@ get_twitch_schedule <- function(id) {
               end = purrr::map(end, ~shift_week(.x, which = "previous"))) %>%
       mutate(start = purrr::map(start, ~clock::as_naive_time(.x)),
              end = purrr::map(end, ~clock::as_naive_time(.x)))
-
-      # bind back together
-      res_final <- dplyr::bind_rows(
-        tidyr::unnest(res_first, c("start", "end")), 
-        tidyr::unnest(res_int, c("start", "end"))
-      ) %>%
-      mutate(start = as.character(start), end = as.character(end))
-
-
+    
+    # bind back together
+    res_final <- dplyr::bind_rows(
+      tidyr::unnest(res_first, c("start", "end")), 
+      tidyr::unnest(res_int, c("start", "end"))
+    )
+    
+    # perform additional filtering if vacation is defined
+    vacation_ind <- !is.null(r$vacation)
+    
+    if (vacation_ind) {
+      message(glue::glue("applying vacation rules for {id}"))
+      # obtain the vacation data frame and get clock version of date/time
+      res_vacation <- r$vacation %>%
+        mutate(start = purrr::map(start_time, ~time_parser(.x, convert_to_char = FALSE)),
+               end = purrr::map(end_time, ~time_parser(.x, convert_to_char = FALSE))) %>%
+        tidyr::unnest(c("start", "end")) %>%
+        select(start, end)
+      
+      start_vacation <- res_vacation %>% pull(start)
+      end_vacation <- res_vacation$end
+      
+      # remove records in vacation start/end window
+      res_final <- res_final %>%
+        mutate(in_vac_window = ((start > start_vacation) & (end < end_vacation))) %>%
+        filter(!in_vac_window) %>%
+        select(., -in_vac_window)
+    }
+    
+    # convert start and end back to character for use with shinycal
+    res_final <- mutate(res_final, start = as.character(start), end = as.character(end))
   }
   return(res_final)
 }
@@ -210,7 +221,6 @@ get_twitch_videos <- function(id) {
   }
 
   videos_play <- videos$data %>%
-    #tibble() %>%
     dplyr::mutate(video_id = purrr::map_chr(url, ~{
       tmp <- stringr::str_split(.x, "/")
       n_items <- length(tmp[[1]])

@@ -429,8 +429,8 @@
       "RemoteUsername": "KoderKow",
       "RemoteRepo": "twitchr",
       "RemoteRef": "master",
-      "RemoteSha": "34e99050280663663085ea133ac9f5adeb810253",
-      "Hash": "d0db733084dbd1a11d5c8b51e859f73c"
+      "RemoteSha": "8c4ec37d3725f3e7b7060eb70577d63b639deb60",
+      "Hash": "205079345ab00f2e78ddea9170e3ceb6"
     },
     "tzdb": {
       "Package": "tzdb",
