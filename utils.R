@@ -107,6 +107,12 @@ get_twitch_schedule <- function(id) {
       current_sunday <- clock::date_now("America/New_York") %>% 
         clock::date_shift(target = clock::weekday(clock::clock_weekdays$sunday), which = "previous")
 
+      res <- httr::content(r, "parsed")
+      if (length(res$data) < 1) {
+        warning(glue::glue("User {id} does not have any videos! Skipping schedule parsing..."))
+        return(NULL)
+      }
+      
       res <- httr::content(r, "parsed") %>%
         purrr::pluck("data") %>%
         tibble::tibble() %>%
