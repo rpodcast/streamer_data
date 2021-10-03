@@ -85,8 +85,11 @@ time_parser <- function(x, orig_zone = "UTC", new_zone = "America/New_York", for
 
 get_twitch_schedule <- function(id) {
   message(glue::glue("parsing schedule for {id}"))
-  r <- twitchr::get_schedule(broadcaster_id = id, clean_json = TRUE)
-  status <- is.null(r)
+
+  safe_schedule <- purrr::safely(twitchr::get_schedule, otherwise = NULL)
+  
+  r <- safe_schedule(broadcaster_id = id, clean_json = TRUE)
+  status <- is.null(r$result)
 
   if (status) {
     warning(glue::glue("User {id} does not have valid schedule data. Proceeding to infer a schedule based on videos uploaded (status code {status})"))
@@ -145,6 +148,7 @@ get_twitch_schedule <- function(id) {
       }
     }
   } else {
+    r <- r$result
     res <- r$data
 
     res_int <- res %>%
