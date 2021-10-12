@@ -202,6 +202,18 @@ get_twitch_schedule <- function(id) {
     # convert start and end back to character for use with shinycal
     res_final <- mutate(res_final, start = as.character(start), end = as.character(end))
   }
+
+  # remove any records with missing start or end
+  missing_start_ind <- any(is.na(res_final$start_time))
+  missing_end_ind <- any(is.na(res_final$end_time))
+
+  if (any(missing_start_ind, missing_end_ind)) {
+    res_final <- res_final %>%
+      filter(!is.na(start_time) & !is.na(end_time))
+
+    if (nrow(res_final) < 1) return(NULL)
+  }
+  
   return(res_final)
 }
 
