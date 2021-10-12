@@ -29,6 +29,12 @@ streamer_data <- yml_data %>%
     dplyr::mutate(schedule_data = purrr::map(id, ~get_twitch_schedule(.x)),
             videos_data = purrr::map(id, ~get_twitch_videos(.x)))
 
+# remove any rows with null schedule_data
+streamer_data <- streamer_data %>%
+  mutate(schedule_valid = purrr::map_lgl(schedule_data, ~!is.null(.x))) %>%
+  filter(schedule_valid) %>%
+  select(., -schedule_valid)
+
 if (config::is_active("production")) {
   s3saveRDS(
     x = streamer_data,
