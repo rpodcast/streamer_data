@@ -2,6 +2,8 @@ user_id: tanho_
 name: Tan Ho
 twitter_id: _TanHo
 platform: twitch
+bgColor: "#d31027"
+color: "white"
 categories:
   - r
   - datascience
