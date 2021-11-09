@@ -85,7 +85,7 @@ time_parser <- function(x, orig_zone = "UTC", new_zone = "America/New_York", for
 
 get_twitch_schedule <- function(id) {
   message(glue::glue("parsing schedule for {id}"))
-
+  
   safe_schedule <- purrr::safely(twitchr::get_schedule, otherwise = NULL)
   
   r <- safe_schedule(broadcaster_id = id, clean_json = TRUE)
@@ -220,6 +220,11 @@ get_twitch_schedule <- function(id) {
 
 get_twitch_videos <- function(id) {
   message(glue::glue("twitch id {id}"))
+  
+  # calculate current cutoff for recent videos
+  cutoff <- clock::add_months(clock::date_now(zone = "UTC"), -2) %>%
+    time_parser(orig_zone = "UTC", convert_to_char = FALSE)
+
   videos <- twitchr::get_videos(user_id = id, first = 100) 
 
   if (is.null(videos)) {
@@ -236,9 +241,20 @@ get_twitch_videos <- function(id) {
           res <- tmp[[1]][n_items]
           return(res)
         })) %>%
-        dplyr::slice(1) %>%
-        dplyr::pull(video_id)
-      return(videos_play)
+        dplyr::slice(1)
+
+        video_dt <- videos_play %>%
+          pull(created_at) %>%
+          time_parser(orig_zone = "UTC", convert_to_char = FALSE)
+          
+        video_recent <- video_dt > cutoff
+      
+        res <- list(
+          video_id = dplyr::pull(videos_play, video_id),
+          video_recent = video_recent
+        )
+
+      return(res)
     }
   }
 
@@ -249,8 +265,18 @@ get_twitch_videos <- function(id) {
       res <- tmp[[1]][n_items]
       return(res)
     })) %>%
-    dplyr::slice(1) %>%
-    dplyr::pull(video_id)
+    dplyr::slice(1)
 
-  return(videos_play)
+    video_dt <- videos_play %>%
+      pull(created_at) %>%
+      time_parser(orig_zone = "UTC", convert_to_char = FALSE)
+      
+    video_recent <- video_dt > cutoff
+
+    res <- list(
+      video_id = dplyr::pull(videos_play, video_id),
+      video_recent = video_recent
+    )    
+
+  return(res)
 }
