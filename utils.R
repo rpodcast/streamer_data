@@ -54,7 +54,7 @@ shift_week <- function(x, convert = TRUE, which = "next") {
   } else {
     # get current day of week from supplied date
     x_weekday <- clock::as_year_month_weekday(x) %>% clock::get_day()
-    res <- clock::date_shift(x, target = clock::weekday(x_weekday), which = which, boundary = "advance")
+    res <- clock::date_shift(x, target = clock::weekday(x_weekday), which = which, boundary = "advance", ambiguous = "earliest")
     return(res)
   }
 }
