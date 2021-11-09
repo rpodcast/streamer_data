@@ -27,7 +27,17 @@ streamer_data <- yml_data %>%
     dplyr::mutate(user_data = purrr::map(user_id, ~get_twitch_id(user_name = .x))) %>%
     tidyr::unnest(cols = user_data) %>%
     dplyr::mutate(schedule_data = purrr::map(id, ~get_twitch_schedule(.x)),
-            videos_data = purrr::map(id, ~get_twitch_videos(.x)))
+                  videos_list = purrr::map(id, ~get_twitch_videos(.x))) %>%
+    dplyr::mutate(video_recent = purrr::map_lgl(videos_list, function(x) {
+      if (is.na(x)) {
+        return(FALSE)
+      } else {
+        return(x$video_recent)
+      }
+    })) %>%
+    filter(video_recent) %>%
+    dplyr::mutate(video_data = purrr::map(videos_list, function(x) x[["video_id"]])) %>%
+    select(., -video_recent, -videos_list)
 
 # remove any rows with null schedule_data
 streamer_data <- streamer_data %>%
